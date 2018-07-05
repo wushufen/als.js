@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta name="MobileOptimized" content="320">
+    <meta name="HandheldFriendly" content="true">
+    <meta name="full-screen" content="yes">
+    <meta name="x5-fullscreen" content="true">
+    <meta name="browsermode" content="application">
+    <meta name="x5-page-mode" content="app">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <title>als.js</title>
+</head>
+<body>
+
+    <div id="el">
+        
+        <input v-model="form.name" @keypress.enter="add" autofocus>
+        <button @click="add">+</button>
+
+        <ul id="list">
+            <li v-for="item in list">
+                {{item.name}}
+                <button @click="del(item)">-</button>
+            </li>
+        </ul>
+
+    </div>
+    <script src="https://vuejs.org/js/vue.min.js"></script>
+    <script src="http://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../ajax.js/ajax.js"></script>
+    <script src="als.js"></script>
+    <script>
+        als.rule(function(type, url){
+            // server.com/path/to/user/save
+            var m = url.match('.*/(.*)/(.*)')
+            if (m) {
+                var table = m[1]
+                var action = m[2]
+                
+                return {
+                    table: table,
+                    action: action
+                }
+            }
+        })
+
+        // als.rule({
+        //     url: '/user/add',
+        //     table: 'user',
+        //     action: 'insert'
+        // })
+        // als.rule({
+        //     url: '/user/list',
+        //     table: 'user',
+        //     action: 'select'
+        // })
+        als.open()
+    </script>
+    <script>
+        var vue = new Vue({
+            el: '#el',
+            data: {
+                form: {
+                    name: ''
+                },
+                list: []
+            },
+            methods: {
+                add: function () {
+                    xhr = ajax({
+                        type: 'post',
+                        url: '/user/add',
+                        data: this.form,
+                        success: function (res) {
+                            vue.load()
+                        }
+                    })
+                },
+                load: function () {
+                    var xhr = $.ajax({
+                        type: 'post',
+                        url: '/user/list',
+                        data: {},
+                        dataType: 'json',
+                        success: function(res){
+                            console.log(res)
+                            if(res.code == 0){
+                                vue.list = res.data
+                            }
+                        }
+                    })
+                },
+                del: function (item) {
+                    ajax({
+                        type: 'post',
+                        url: '/user/delete',
+                        data: {
+                            id: item.id
+                        },
+                        success: function (res) {
+                            console.log(res)
+                            vue.load()
+                        }
+                    })
+                }
+            },
+            mounted: function () {
+                this.load()
+            }
+        })
+    </script>
+</body>
+</html>
