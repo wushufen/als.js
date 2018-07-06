@@ -1,26 +1,26 @@
 !function () {
-	
+
 	// 
 	// XMLHttpRequest 冒充
 	// 
-	function replaceXHR(){
+	function fakeXHR() {
 
 		// 真·太子 
 		var XHR = window.XMLHttpRequest
 		var PRO = XHR.prototype
 
 		// 冒充者
-		var _XHR = function(){
+		var _XHR = function () {
 			this.xhr = new XHR
 		}
 		var _PRO = _XHR.prototype
 
 		// 冒充者继承家产
-		for(var key in PRO){
-			(function(key){
-				var fun = (function(){try{return PRO[key]}catch(e){}}())
+		for (var key in PRO) {
+			(function (key) {
+				var fun = (function () { try { return PRO[key] } catch (e) { } }())
 				// 假·方法 ***
-				_PRO[key] = typeof(fun)!='function'? fun : function(){
+				_PRO[key] = typeof (fun) != 'function' ? fun : function () {
 					// console.log(key, fun)
 					// 真·方法
 					fun.apply(this.xhr, arguments)
@@ -37,7 +37,7 @@
 			// 真·变化
 			xhr.onreadystatechange = function () {
 				// 假·信息 <- 真·信息
-				for(var k in xhr){
+				for (var k in xhr) {
 					var v = xhr[k]
 					if (typeof v != 'function') {
 						_xhr[k] = v
@@ -75,10 +75,10 @@
 			this.name = 'als:' + name
 			return this
 		},
-		read: function(){
-			try{
+		read: function () {
+			try {
 				return JSON.parse(this.store[this.name]) || []
-			}catch(e){
+			} catch (e) {
 				return []
 			}
 		},
@@ -87,30 +87,34 @@
 		},
 		cid: function () {
 			var id = this.store['als.id'] || '0'
-			id = +id +1
+			id = +id + 1
 			return this.store['als.id'] = id
 		},
-		insert: function (data) {
+		insert: function (data, pk) {
+			pk = pk || 'id'
 			var list = this.read()
+			data[pk] = this.cid()
 			list.push(data)
 			this.write(list)
 		},
 		update: function (data, pk) {
 			pk = pk || 'id'
-
+			var list = this.read()
 			var where = {}
 			where[pk] = data[pk]
-			this.delete(where)
-
-			this.insert(data)
+			for (var i = 0, length = list.length; i < length; i++) {
+				var item = list[i]
+				if (this.match(item, where)) {
+					list[i] = data
+				}
+			}
+			this.write(list)
 		},
 		save: function (data, pk) {
 			pk = pk || 'id'
-
 			if (data[pk]) {
 				this.update(data, pk)
-			}else{
-				data[pk] = this.cid()
+			} else {
 				this.insert(data)
 			}
 		},
@@ -119,12 +123,12 @@
 			for (var i = 0, length = list.length; i < length; i++) {
 				var item = list[i]
 				if (this.match(item, where)) {
-					list.splice(i, 1), i--, length--
+					list.splice(i, 1), i-- , length--
 				}
 			}
 			this.write(list)
 		},
-		page: function(pageIndex, pageSize){
+		page: function (pageIndex, pageSize) {
 			this.pageIndex = pageIndex
 			this.pageSize = pageSize
 			return this
@@ -142,10 +146,10 @@
 			if (this.pageIndex) {
 				var pageIndex = this.pageIndex
 				var pageSize = this.pageSize || 10
-	            var start = (pageIndex - 1) * pageSize
-	            var end = start + pageSize
-	            delete this.pageIndex
-	            return arr.slice(start, end)
+				var start = (pageIndex - 1) * pageSize
+				var end = start + pageSize
+				delete this.pageIndex
+				return arr.slice(start, end)
 			}
 
 			return arr
@@ -156,10 +160,10 @@
 			}
 
 			var isMatch = true
-			for(var key in where){
+			for (var key in where) {
 				var ov = obj[key]
 				var wv = where[key]
-				if (ov!=wv && typeof(ov)!='object' && typeof(wv)!='object') {
+				if (ov != wv && typeof (ov) != 'object' && typeof (wv) != 'object') {
 					isMatch = false
 					break
 				}
@@ -170,89 +174,121 @@
 
 
 	// k=v&a=b  //=> {}
-	function parseData (params) {
-		if (!params) {
-			return params
-		}
+	function parseParams(params) {
+		if (!params) { return params }
+
 		var data = {}
 		params = params.replace(/\+/g, ' ')
 		var kvs = params.split('&')
-		for(var i=0; i<kvs.length; i++){
-			var item = kvs[i]
-			kv = item.split('=')
-			data[kv[0]] = kv[1]
+
+		for (var i = 0; i < kvs.length; i++) {
+			var kkv = kvs[i]
+			var kk_v = kkv.split('=')
+			var kk = decodeURIComponent(kk_v[0]) // obj[a][0][ak]
+			var value = decodeURIComponent(kk_v[1]) // 1
+
+			set(data, kk, convertValue(value))
 		}
+
+		function set(data, kk, value) {
+			var path = kk.replace(/\]/g, '').split('[') // ["obj", "a", "0", "ak"]
+
+			var parent = data
+
+			for (var i = 0; i < path.length; i++) {
+				var key = path[i] // a
+				var nextKey = path[i + 1] // 0
+
+				// ["obj", "a", "0"
+				// last = obj.a[0] = []  || obj.a[0] = {}
+				// last.push(value)      || last[key] = value
+				if (i == path.length - 1) break
+
+				// 下个key决定当前是对象还是数组
+				var cur = parent[key] || (isNaN(nextKey) ? {} : []) // '0' ''
+				parent[key] = cur
+				parent = cur
+
+			}
+
+			// last key
+			// obj.a[0]  ['ak'] = 1
+			parent instanceof Array ? parent.push(value) : parent[key] = value
+
+			return data
+		}
+
+		function convertValue(value) {
+			if (value == 'undefined' || value == 'null') value = null
+			if (value == 'true') value = true
+			if (value == 'false') value = false
+			if (value && typeof value == 'string' && !isNaN(value)) value = Number(value)
+			return value
+		}
+
 		return data
 	}
 
 
 
 
-
 	// 拦截
 	function inject() {
-		replaceXHR()
+		fakeXHR()
 
 		var XHR = XMLHttpRequest
 		var PRO = XHR.prototype
 		var PRO_open = PRO.open
 
 		PRO.open = function (type, url) {
-			this.type = type
-			this.url = url
 
 			// 匹配到拦截规则
-			this.rule = getRule(type, url)
-			// console.log(type, url, this.rule)
+			var rule = getRule(type, url)
 
-			if (this.rule) {
+			if (rule) {
+
+				this.send = function (data) {
+					var params = data
+					data = parseParams(data)
+					console.info('[als]', type, url, data, rule)
+
+					var table = rule.table
+					var action = rule.action
+					var actions = ['select', 'insert', 'update', 'save', 'delete']
+					var isAction = actions.indexOf(action) != -1
+
+					// 模拟数据
+					var res = ''
+					if (isAction) {
+						var res = db.table(table)[action](data)
+					} else {
+						console.error('[als] action must be: ' + actions, '=>', action)
+					}
+					res = als.after ? als.after(res) : res
+					res = JSON.stringify(res)
+
+					// 模拟成功
+					this.readyState = 4
+					this.status = 200
+					this.response = this.responseText = res
+
+					// 手动触发用户注册的回调
+					var onload = this.onload
+					var orc = this.onreadystatechange
+					onload && onload.apply(this, [{}])
+					orc && orc.apply(this, [{}])
+					this.onload = null
+					this.onreadystatechange = null
+
+					PRO.send.apply(this, arguments)
+				}
+
+
+				// PRO_open.apply(this, arguments)
 				PRO_open.apply(this, [type, '.?als=' + url])
 			} else {
 				PRO_open.apply(this, arguments)
 			}
-		}
-
-		var PRO_send = PRO.send
-		PRO.send = function (data) {
-			var type = this.type
-			var url = this.url
-			data = parseData(data)
-
-			// 转到本地存储
-			if (this.rule) {
-				console.info('[als]', type, url, data, this.rule)
-
-				var rule = this.rule
-				var table = rule.table
-				var action = rule.action
-				var actions = ['select', 'insert', 'update', 'save', 'delete']
-
-				var isAction = actions.indexOf(action) != -1
-
-				if (isAction) {
-					// 模拟数据库执行
-					var res = db.table(table)[action](data)
-				} else {
-					console.error('[als] action must be: ' + actions, '=>', action)
-				}
-
-
-				res = als.after?als.after(res):res
-				res = JSON.stringify(res)
-
-				var _orc = this.onreadystatechange
-				this.onreadystatechange = function () {
-					this.status = 200
-					this.response = this.responseText = res
-
-					_orc && _orc.apply(this, arguments)
-				}
-
-				PRO_send.apply(this, arguments)
-			} else {
-				PRO_send.apply(this, arguments)
-			}
-
 		}
 
 	}
@@ -266,7 +302,7 @@
 		for (var i = rules.length - 1; i >= 0; i--) {
 			var rule = rules[i]
 			if (typeof rule == 'object') {
-				if (url.match(rule.url) && (!rule.type || (rule.type && rule.type.toUpperCase()==type.toUpperCase()))) {
+				if (url.match(rule.url) && (!rule.type || (rule.type && rule.type.toUpperCase() == type.toUpperCase()))) {
 					return rule
 				}
 			}
@@ -315,7 +351,7 @@
 
 	if (typeof module != 'undefined') {
 		module.exports = als
-	} else{
+	} else {
 		window.als = als
 	}
 

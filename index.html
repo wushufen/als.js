@@ -21,13 +21,14 @@
 <body>
 
     <div id="el">
-        
-        <input v-model="form.name" @keypress.enter="add" autofocus>
-        <button @click="add">+</button>
 
         <ul id="list">
+            <li>
+                <input v-model="form.name" @keypress.enter="add" autofocus>
+                <button @click="add">+</button>
+            </li>
             <li v-for="item in list">
-                {{item.name}}
+                <input v-model="item.name" @keyup="edit(item)">
                 <button @click="del(item)">-</button>
             </li>
         </ul>
@@ -44,7 +45,7 @@
             if (m) {
                 var table = m[1]
                 var action = m[2]
-                
+
                 return {
                     table: table,
                     action: action
@@ -52,16 +53,24 @@
             }
         })
 
-        // als.rule({
-        //     url: '/user/add',
-        //     table: 'user',
-        //     action: 'insert'
-        // })
-        // als.rule({
-        //     url: '/user/list',
-        //     table: 'user',
-        //     action: 'select'
-        // })
+        als.rule({
+            url: '/user/add',
+            table: 'user',
+            action: 'insert'
+        })
+        als.rule({
+            url: '/user/list',
+            table: 'user',
+            action: 'select'
+        })
+
+        als.after = function (data) {
+            return {
+                code: 0,
+                msg: 'success',
+                data: data
+            }
+        }
         als.open()
     </script>
     <script>
@@ -69,13 +78,23 @@
             el: '#el',
             data: {
                 form: {
-                    name: ''
+                    name: '',
+
+                    obj:{
+                        a: [
+                            {ak:1},
+                            {ak:2}
+                        ],
+                        o: {
+                            k: 122222222
+                        }
+                    }
                 },
                 list: []
             },
             methods: {
                 add: function () {
-                    xhr = ajax({
+                    $.ajax({
                         type: 'post',
                         url: '/user/add',
                         data: this.form,
@@ -83,28 +102,37 @@
                             vue.load()
                         }
                     })
+                    this.form.name=''
+                },
+                edit: function (item) {
+                    $.ajax({
+                        type: 'post',
+                        url: '/user/update',
+                        data: item,
+                        success: function (res) {
+                            vue.load()
+                        }
+                    })
                 },
                 load: function () {
-                    var xhr = $.ajax({
+                    $.ajax({
                         type: 'post',
                         url: '/user/list',
                         data: {},
                         dataType: 'json',
                         success: function(res){
-                            console.log(res)
-                            if(res.code == 0){
+                            // console.trace(this)
+                            if(res && res.code == 0){
                                 vue.list = res.data
                             }
                         }
                     })
                 },
                 del: function (item) {
-                    ajax({
+                    $.ajax({
                         type: 'post',
                         url: '/user/delete',
-                        data: {
-                            id: item.id
-                        },
+                        data: item,
                         success: function (res) {
                             console.log(res)
                             vue.load()
@@ -113,7 +141,10 @@
                 }
             },
             mounted: function () {
-                this.load()
+                setTimeout(function () {
+                    
+                    vue.load()
+                }, 10)
             }
         })
     </script>
