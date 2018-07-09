@@ -48,7 +48,7 @@
 
                 return {
                     table: table,
-                    action: action
+                    action: action,
                 }
             }
         })
@@ -61,7 +61,7 @@
         als.rule({
             url: '/user/list',
             table: 'user',
-            action: 'select'
+            action: 'select',
         })
 
         als.after = function (data) {
@@ -115,13 +115,13 @@
                     })
                 },
                 load: function () {
-                    $.ajax({
+                    ajax({
                         type: 'post',
                         url: '/user/list',
                         data: {},
                         dataType: 'json',
                         success: function(res){
-                            // console.trace(this)
+                            console.log(res)
                             if(res && res.code == 0){
                                 vue.list = res.data
                             }

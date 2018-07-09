@@ -1,71 +1,6 @@
 !function () {
 
 	// 
-	// XMLHttpRequest 冒充
-	// 
-	function fakeXHR() {
-
-		// 真·太子 
-		var XHR = window.XMLHttpRequest
-		var PRO = XHR.prototype
-
-		// 冒充者
-		var _XHR = function () {
-			this.xhr = new XHR
-		}
-		var _PRO = _XHR.prototype
-
-		// 冒充者继承家产
-		for (var key in PRO) {
-			(function (key) {
-				var fun = (function () { try { return PRO[key] } catch (e) { } }())
-				// 假·方法 ***
-				_PRO[key] = typeof (fun) != 'function' ? fun : function () {
-					// console.log(key, fun)
-					// 真·方法
-					fun.apply(this.xhr, arguments)
-				}
-			})(key)
-		}
-
-		// 假·发送 <- 用户
-		_PRO.send = function (data) {
-			var _xhr = this
-			var xhr = this.xhr
-			// console.info('[als]', type, url, data)
-
-			// 真·变化
-			xhr.onreadystatechange = function () {
-				// 假·信息 <- 真·信息
-				for (var k in xhr) {
-					var v = xhr[k]
-					if (typeof v != 'function') {
-						_xhr[k] = v
-					}
-				}
-
-				// 假·变化 -> 用户
-				var _orc = _xhr.onreadystatechange
-				_orc && _orc.apply(_xhr, arguments)
-			}
-			// 真·完成
-			xhr.onload = function () {
-				// 假·完成 -> 用户
-				_xhr.onload && _xhr.onload.apply(_xhr, arguments)
-			}
-
-			// 真·发送
-			xhr.send.apply(xhr, arguments)
-		}
-
-		// 冒充者 上位
-		window.XMLHttpRequest = _XHR
-		_XHR.XHR = XHR
-	}
-
-
-
-	// 
 	// 本地存储 模拟 数据库
 	// 
 	var db = {
@@ -230,69 +165,154 @@
 	}
 
 
+	var XHR = window.XMLHttpRequest
+	var _XHR = fakeXHR(XHR)
+	// 
+	// XMLHttpRequest 冒充
+	// 
+	function fakeXHR(XHR) {
+
+		// 真·太子 
+		var XHR = XHR
+		var PRO = XHR.prototype
+
+		// 冒充者
+		var _XHR = function () {
+			this.xhr = new XHR
+		}
+		var _PRO = _XHR.prototype
+
+		// 冒充者继承家产
+		for (var key in PRO) {
+			(function (key) {
+				var fun = (function () { try { return PRO[key] } catch (e) { } }())
+				// 假·方法 ***
+				_PRO[key] = typeof (fun) != 'function' ? fun : function () {
+					// console.log(key, fun)
+					// 真·方法
+					fun.apply(this.xhr, arguments)
+				}
+			})(key)
+		}
+
+		// 假·发送 <- 用户
+		_PRO.send = function (data) {
+			var _xhr = this
+			var xhr = this.xhr
+			// console.info('[als]', type, url, data)
+
+			// 真·变化
+			xhr.onreadystatechange = function () {
+				// 假·信息 <- 真·信息
+				for (var k in xhr) {
+					var v = xhr[k]
+					if (typeof v != 'function') {
+						_xhr[k] = v
+					}
+				}
+
+				// 假·变化 -> 用户
+				var _orc = _xhr.onreadystatechange
+				_orc && _orc.apply(_xhr, arguments)
+			}
+			// 真·完成
+			xhr.onload = function () {
+				// 假·完成 -> 用户
+				_xhr.onload && _xhr.onload.apply(_xhr, arguments)
+			}
+
+			// 真·发送
+			xhr.send.apply(xhr, arguments)
+		}
+
+		// 冒充者
+		return _XHR
+	}
 
 
 	// 拦截
-	function inject() {
-		fakeXHR()
+	function inject(_XHR) {
 
-		var XHR = XMLHttpRequest
+		var XHR = _XHR
 		var PRO = XHR.prototype
 		var PRO_open = PRO.open
 
 		PRO.open = function (type, url) {
+			try{
 
-			// 匹配到拦截规则
-			var rule = getRule(type, url)
+				// 匹配到拦截规则
+				var rule = getRule(type, url)
+				var table = rule.table
+				var action = rule.action
+				var actions = ['select', 'insert', 'update', 'save', 'delete']
+				var isAction = actions.indexOf(action) != -1
+				console.log('open', rule)
 
-			if (rule) {
+				if (rule && isAction) {
 
-				this.send = function (data) {
-					var params = data
-					data = parseParams(data)
-					console.info('[als]', type, url, data, rule)
+					this.send = function (data) {
+						console.info('[als]', type, url)
+						console.info('	table:', table, '	action:', action)
+						console.info('	data:', data)
 
-					var table = rule.table
-					var action = rule.action
-					var actions = ['select', 'insert', 'update', 'save', 'delete']
-					var isAction = actions.indexOf(action) != -1
+						var params = data
+						if (typeof params == 'string') {
+							data = params.match('{')? JSON.parse(data): parseParams(data)
+						}
 
-					// 模拟数据
-					var res = ''
-					if (isAction) {
-						var res = db.table(table)[action](data)
-					} else {
-						console.error('[als] action must be: ' + actions, '=>', action)
+
+						// 模拟数据
+						var res = ''
+						if (isAction) {
+							var res = db.table(table)[action](data) || []
+						} else {
+							console.warn('[als] action must be: ' + actions, '=>', action)
+						}
+						var after = rule.after || als.after
+						console.log('res', res)
+						res = after ? after(res) : res
+
+						console.info('	res:', res)
+
+
+						// 取消用户注册的回调
+						var onload = this.onload
+						var orc = this.onreadystatechange
+						this.onload = null
+						this.onreadystatechange = null
+
+						// 模拟成功
+						var xhr = this
+						setTimeout(function () {
+							res = JSON.stringify(res)
+							xhr.readyState = 4
+							xhr.status = 200
+							xhr.response = xhr.responseText = res
+
+							// 手动触发用户回调
+							onload && onload.apply(xhr, [{}])
+							orc && orc.apply(xhr, [{}])
+						}, 1)
+
+
+						PRO.send.apply(this, arguments)
 					}
-					res = als.after ? als.after(res) : res
-					res = JSON.stringify(res)
 
-					// 模拟成功
-					this.readyState = 4
-					this.status = 200
-					this.response = this.responseText = res
 
-					// 手动触发用户注册的回调
-					var onload = this.onload
-					var orc = this.onreadystatechange
-					onload && onload.apply(this, [{}])
-					orc && orc.apply(this, [{}])
-					this.onload = null
-					this.onreadystatechange = null
-
-					PRO.send.apply(this, arguments)
+					// PRO_open.apply(this, arguments)
+					PRO_open.apply(this, [type, url + '?__@[als]'])
+					// PRO_open.apply(this, ['GET', '.?als:' + type + '='+ url])
+				} else {
+					PRO_open.apply(this, arguments)
 				}
 
-
-				// PRO_open.apply(this, arguments)
-				PRO_open.apply(this, [type, '.?als=' + url])
-			} else {
-				PRO_open.apply(this, arguments)
+			}catch(e){
+				console.error(e)
 			}
 		}
 
 	}
-
+	inject(_XHR)
 
 
 
@@ -310,6 +330,7 @@
 				return rule(type, url)
 			}
 		}
+		return false
 	}
 
 
@@ -336,17 +357,13 @@
 		}
 	}
 	als.open = function () {
-		inject()
+		window.XMLHttpRequest = _XHR
 		return this
 	}
 	als.close = function () {
-		window.XMLHttpRequest = XMLHttpRequest.XHR || XMLHttpRequest
+		window.XMLHttpRequest = XHR
 		return this
 	}
-
-	// als.open()
-	// als.close()
-
 
 
 	if (typeof module != 'undefined') {
