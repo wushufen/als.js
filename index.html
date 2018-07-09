@@ -39,16 +39,20 @@
     <script src="../ajax.js/ajax.js"></script>
     <script src="als.js"></script>
     <script>
-        als.rule(function(type, url){
+        als.rule(function(type, url, data){
+
             // server.com/path/to/user/save
             var m = url.match('.*/(.*)/(.*)')
             if (m) {
                 var table = m[1]
                 var action = m[2]
+                if (action=='list') {action='select'}
 
                 return {
                     table: table,
                     action: action,
+                    pageNo: data.pageNo,
+                    pageSize: data.pageSize
                 }
             }
         })
@@ -58,11 +62,11 @@
             table: 'user',
             action: 'insert'
         })
-        als.rule({
-            url: '/user/list',
-            table: 'user',
-            action: 'select',
-        })
+        // als.rule({
+        //     url: '/user/list',
+        //     table: 'user',
+        //     action: 'select',
+        // })
 
         als.after = function (data) {
             return {
@@ -115,7 +119,7 @@
                     })
                 },
                 load: function () {
-                    ajax({
+                    $.ajax({
                         type: 'post',
                         url: '/user/list',
                         data: {},
