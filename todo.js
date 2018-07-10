@@ -13,3 +13,19 @@ als(function(type, url, data){
   }
 ​
 })
+
+als(function(type, url, data){
+​
+  var m = url.match('user/detail')
+  if(m){
+​
+    var rs = als.table('user').select(data)
+​
+    return {
+        code: 10000,
+        msg: 'success',
+        data: data[0]
+    }
+  }
+​
+})
