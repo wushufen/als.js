@@ -33,7 +33,7 @@ als(function (type, url, data) {
     action = {
       'add': 'insert',
       'list': 'select'
-    }[action]
+    }[action] || action
     // ...
 
     // 如果action为 insert, update, save, delete, select

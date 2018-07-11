@@ -297,7 +297,7 @@
                     }, 1)
 
                     // log
-                    console.info('[als]', type, url, data, rs)
+                    console.info('\n', '[als]', type, url, '\n', data, '\n', rs, '\n\n')
 
                 } else {
 

@@ -17,174 +17,63 @@
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
     <title>als.js</title>
+    <style type="text/css">
+        body{
+            margin:0;
+            font-family: "Microsoft Yahei";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        a {
+            text-decoration: none;
+            color: #fff;
+        }
+        .banner{
+            min-height: 100%;
+            background: #688898;
+            color: #fff;
+            text-align: center;
+            overflow: hidden;
+            padding: 0 1em;
+        }
+        .banner h1{color:#fff; font-size: 60px; font-weight: normal; margin: 75px 0;}
+        .banner h2{color:#eee; font-size: 30px; font-weight: normal; margin: 75px 0;}
+        .banner h2 span{display:inline-block; border: solid 1px #ddd; border-radius: 5px; min-width: 12ex; padding: 5px 0}
+        .banner h3{color:#eee; font-size: 20px; font-weight: normal; margin: 75px 0;font-family: cursive;}
+        .banner .button{
+            display: inline-block;
+            border: solid 1px #ddd;
+            border-radius: 5px;
+            color: #fff;
+            padding: .5em 1em;
+            margin-bottom: 2em;
+        }
+
+        @media all and (max-width:640px){
+            .banner h2 span{
+                display: block;
+            }
+        }
+    </style>
 </head>
 <body>
 
-    <div id="el">
+    <div class="banner">
+        <h1><a href="https://github.com/wusfen/als.js">als.js<a></h1>
+        <h2>
+            <span>ajax</span>
+            <=>
+            <span>als</span>
+            <=>
+            <span>localStorage</span>
+        </h2>
+        <h3>拦截 ajax 使用 localStorage 作为数据库</h3>
 
-        <ul id="list">
-            <li>
-                <input v-model="form.name" @keypress.enter="add" autofocus>
-                <button @click="add">+</button>
-            </li>
-            <li v-for="item in list">
-                <input v-model="item.name" @keyup="edit(item)">
-                <button @click="del(item)">-</button>
-            </li>
-        </ul>
-
+        <a class="button" href="https://github.com/wusfen/als.js">马上开始</a>
     </div>
-    <script src="https://vuejs.org/js/vue.min.js"></script>
-    <script src="http://code.jquery.com/jquery-3.3.1.js"></script>
-    <script src="../ajax.js/ajax.js"></script>
-    <script src="als.js"></script>
-    <script>
 
-        // 添加ajax拦截处理器
-        als(function (type, url, data) {
-
-            // ...
-
-            // 本地存储 CRUD
-            var rs = als.table('tname').select()
-
-            // ...
-
-            // 返回作为ajax响应
-            return {
-                code: 10000,
-                data: rs
-            }
-
-        })
-
-        // 开启ajax拦截
-        als.open()
-
-    </script>
-    <script>
-        // 添加ajax拦截处理器
-        als(function (type, url, data) {
-
-            // url匹配
-            var m = url.match('.*/(.*)/(.*)')
-            var table = m[1] // 表名
-            var action = m[2] // 操作
-
-            // action映射
-            if (action=='add') action = 'insert'
-            if (action=='list') action = 'select'
-            // ...
-
-            // 如果action为 insert, update, save, delete, select
-            if (als.isAction(action)) {
-
-                // 可以在保存前对数据作些处理
-                if (action=='insert') {
-                    data.createTime = new Date().getTime()
-                    // ...
-                }
-
-                // 本地数据库 CRUD
-                var rs = als.table(table)[action](data)
-                // als.table('table').insert(data, [pk=id])
-                // als.table('table').update(data, [pk=id])
-                // als.table('table').save(data, [pk=id])
-                // als.table('table').delete(where)
-                // als.table('table').page(pageNo, pageSize).select()
-
-                // 返回结果作为ajax响应
-                return {
-                    code: 10000,
-                    msg: 'success',
-                    data: rs
-                }
-            }
-
-            // 如果没有 return 则不拦截该请求
-
-        })
-
-        // 开启ajax拦截
-        if ('dev') {
-            als.open()
-        }
-
-    </script>
-    <script>
-        var vue = new Vue({
-            el: '#el',
-            data: {
-                form: {
-                    name: '',
-
-                    obj:{
-                        a: [
-                            {ak:1},
-                            {ak:2}
-                        ],
-                        o: {
-                            k: 122222222
-                        }
-                    }
-                },
-                list: []
-            },
-            methods: {
-                add: function () {
-                    $.ajax({
-                        type: 'post',
-                        url: '/user/add',
-                        data: this.form,
-                        success: function (res) {
-                            vue.load()
-                        }
-                    })
-                    this.form.name=''
-                },
-                edit: function (item) {
-                    $.ajax({
-                        type: 'post',
-                        url: '/user/update',
-                        data: item,
-                        success: function (res) {
-                            vue.load()
-                        }
-                    })
-                },
-                load: function () {
-                    $.ajax({
-                        type: 'post',
-                        url: '/user/list',
-                        data: {},
-                        dataType: 'json',
-                        success: function(res){
-                            console.log(res)
-                            if(res && res.code == 10000){
-                                vue.list = res.data
-                            }
-                        }
-                    })
-                },
-                del: function (item) {
-                    $.ajax({
-                        type: 'post',
-                        url: '/user/delete',
-                        data: item,
-                        success: function (res) {
-                            console.log(res)
-                            vue.load()
-                        }
-                    })
-                }
-            },
-            mounted: function () {
-                setTimeout(function () {
-                    
-                    vue.load()
-                }, 10)
-            }
-        })
-    </script>
 </body>
 </html>
