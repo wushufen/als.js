@@ -122,12 +122,15 @@ action 是否为 `'select'`, `'insert'`, `'update'`, `'save'`, `'delete'`
 // 上传拦截
 als(function (type, url, data) {
   if (url.match('/upload')) {
+  
+    // 返回一个代替的文件url
     return {
       code: 10000,
       data: {
         url: 'website/file.png'
       }
     }
+
   }
 })
 ```
