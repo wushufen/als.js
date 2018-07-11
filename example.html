@@ -3,19 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="renderer" content="webkit">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-    <meta name="MobileOptimized" content="320">
-    <meta name="HandheldFriendly" content="true">
-    <meta name="full-screen" content="yes">
-    <meta name="x5-fullscreen" content="true">
-    <meta name="browsermode" content="application">
-    <meta name="x5-page-mode" content="app">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="format-detection" content="telephone=no">
-    <meta name="msapplication-tap-highlight" content="no">
     <title>example - als.js</title>
 </head>
 <body>
@@ -24,16 +12,18 @@
 
         <ul id="list">
             <li>
-                <input v-model="form.name" @keypress.enter="add" autofocus>
+                <input v-model="form.name" @keypress.enter="add" placeholder="todo">
                 <button @click="add">+</button>
             </li>
             <li v-for="item in list">
                 <input v-model="item.name" @keyup="edit(item)">
                 <button @click="del(item)">-</button>
+                {{item.id}}
             </li>
         </ul>
 
     </div>
+
     <script src="https://vuejs.org/js/vue.min.js"></script>
     <script src="http://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="als.js"></script>
@@ -46,23 +36,8 @@
             var table = m[1] // 表名
             var action = m[2] // 操作
 
-
-            // action映射
-            action = {
-              'add': 'insert',
-              'list': 'select'
-            }[action] || action
-            // ...
-
             // 如果action为 insert, update, save, delete, select
-            console.log(table, action)
             if (als.isAction(action)) {
-
-                // 可以在保存前对数据作些处理
-                if (action=='insert') {
-                    data.createTime = new Date().getTime()
-                    // ...
-                }
 
                 // 本地数据库 CRUD
                 var rs = als.table(table)[action](data)
@@ -74,8 +49,6 @@
                     data: rs
                 }
             }
-
-            // 如果没有 return 则不拦截该请求
 
         })
 
@@ -90,12 +63,7 @@
             el: '#el',
             data: {
                 form: {
-                    name: '',
-
-                    children: [
-                        {a:1, o:{b:2}},
-                        {a:1, o:{b:2}},
-                    ]
+                    name: ''
                 },
                 list: []
             },
@@ -103,7 +71,7 @@
                 add: function () {
                     $.ajax({
                         type: 'post',
-                        url: '/user/add',
+                        url: 'api/todo/insert',
                         data: this.form,
                         success: function (res) {
                             vue.load()
@@ -114,7 +82,7 @@
                 edit: function (item) {
                     $.ajax({
                         type: 'post',
-                        url: '/user/update',
+                        url: 'api/todo/update',
                         data: item,
                         success: function (res) {
                             vue.load()
@@ -124,11 +92,9 @@
                 load: function () {
                     $.ajax({
                         type: 'get',
-                        url: '/user/list',
-                        data: {},
+                        url: 'api/todo/select',
                         dataType: 'json',
                         success: function(res){
-                            console.log(res)
                             if(res && res.code == 10000){
                                 vue.list = res.data
                             }
@@ -138,7 +104,7 @@
                 del: function (item) {
                     $.ajax({
                         type: 'post',
-                        url: '/user/delete',
+                        url: 'api/todo/delete',
                         data: item,
                         success: function (res) {
                             console.log(res)

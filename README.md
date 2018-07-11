@@ -66,6 +66,8 @@ if ('dev') {
 }
 ```
 
+[查看示例](https://wusfen.github.io/als.js/example.html)|[示例源码](https://github.com/wusfen/als.js/blob/gh-pages/example.html)
+
 ## API
 
 ### als(handler)
