@@ -297,9 +297,7 @@
             var xhr = this
             xhr.send = function(params) {
                 // parse data
-                console.time('parse')
                 parseData(params, function(data){
-console.timeEnd('parse')
                     // 拦截处理
                     var rs
                     try {
