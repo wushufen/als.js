@@ -123,7 +123,8 @@ action 是否为 `'select'`, `'insert'`, `'update'`, `'save'`, `'delete'`
 // 上传拦截
 als(function (type, url, data) {
   if (url.match('/upload')) {
-  
+
+    // 返回结果作为ajax响应
     return {
       code: 10000,
       data: {
