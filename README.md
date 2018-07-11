@@ -77,7 +77,7 @@ if ('dev') {
   * return: 返回则作为ajax响应，无return则不拦截该请求
 
 ### als.open()
-开启ajax拦截。开启之后，被添加的拦截处理器才会生效
+开启ajax拦截。开启拦截处理器才会生效
 
 ### als.close()
 关闭ajax拦截
