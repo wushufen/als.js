@@ -124,11 +124,10 @@ action 是否为 `'select'`, `'insert'`, `'update'`, `'save'`, `'delete'`
 als(function (type, url, data) {
   if (url.match('/upload')) {
   
-    // 返回一个代替的文件url
     return {
       code: 10000,
       data: {
-        url: 'website/file.png'
+        url: data.file // 上传的文件已转为base64，.file 是上传使用的字段名
       }
     }
 
@@ -136,5 +135,3 @@ als(function (type, url, data) {
 })
 ```
 
-## todo
-base64 上传文件
