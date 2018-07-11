@@ -98,7 +98,12 @@
             for (var key in where) {
                 var ov = obj[key]
                 var wv = where[key]
-                if (ov != wv && typeof(ov) != 'object' && typeof(wv) != 'object') {
+
+                if (typeof ov == 'object') continue
+                if (typeof wv == 'object') continue
+                if (!(key in obj)) continue
+
+                if (ov != wv) {
                     isMatch = false
                     break
                 }
@@ -173,7 +178,7 @@
 
     // k=v&a=b  //=> {}
     function parseParams(params) {
-        if (!params) { return params }
+        if (!params) { return {} }
 
         var data = {}
         params = params.replace(/\+/g, ' ')
@@ -257,16 +262,16 @@
         PRO.open = function(type, url) {
             PRO_open.apply(this, arguments)
 
-            this.send = function(data) {
+            this.send = function(params) {
                 try {
                     // parse data
-                    var params = data
+                    var data = {}
                     if (typeof params == 'string') {
-                        data = params.match('{') ? JSON.parse(data) : parseParams(data)
+                        data = params.match('{') ? JSON.parse(params) : parseParams(params)
                     }
 
                     // 拦截规则
-                    var rule = getRule(type, url, data || '')
+                    var rule = getRule(type, url, data)
                     var table = rule.table
                     var action = rule.action
                     var pageNo = rule.pageNo
@@ -277,27 +282,27 @@
 
                     // 匹配到拦截规则
                     if (rule && isAction) {
-                        console.info('[als]', type, url)
-                        console.log('	table:', table, '	action:', action, pageNo, pageSize)
-                        console.log('	data:', data)
 
                         // 覆盖
                         PRO_open.apply(this, [type, url + '?__@[als]'])
 
+                        // before
+                        var before = rule.before || als.before
+                        if (before) {
+                            data = before && before(data)
+                        }
 
-                        // 模拟数据
-                        var res = ''
+                        // 模拟数据库
+                        var rs = []
                         if (isAction) {
-                            var res = db.table(table).page(pageNo, pageSize)[action](data) || []
+                            rs = db.table(table).page(pageNo, pageSize)[action](data) || []
                         } else {
                             console.warn('[als] action must be: ' + actions, '=>', action)
                         }
 
                         // after
                         var after = rule.after || als.after
-                        console.log('	rs:', res)
-                        res = after ? after(res) : res
-                        console.log('	res:', res)
+                        var res = after ? after(rs) : rs
 
 
                         // 取消用户注册的回调
@@ -318,6 +323,18 @@
                             onload && onload.apply(xhr, [{}])
                             orc && orc.apply(xhr, [{}])
                         }, 1)
+
+                        // log
+                        var logInfo = {
+                            table: table,
+                            action: action,
+                            data: data,
+                            rs: rs,
+                            res: res,
+                            pageNo: pageNo,
+                            pageSize: pageSize
+                        }
+                        console.info('[als]', type, url, logInfo)
 
                     }
 
@@ -346,7 +363,9 @@
         rules.push(rule)
         return this
     }
-    als.before = function(data) {}
+    als.before = function(data) {
+        return data
+    }
     als.after = function(data) {
         return data
     }
