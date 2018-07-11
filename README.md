@@ -117,5 +117,20 @@ action 是否为 `'select'`, `'insert'`, `'update'`, `'save'`, `'delete'`
 * pageSize: 页条数
 
 
+## 拦截文件上传
+```javascript
+// 上传拦截
+als(function (type, url, data) {
+  if (url.match('/upload')) {
+    return {
+      code: 10000,
+      data: {
+        url: 'website/file.png'
+      }
+    }
+  }
+})
+```
 
-
+## todo
+base64 上传文件
