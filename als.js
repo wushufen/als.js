@@ -1,3 +1,4 @@
+/*! @preserve https://github.com/wusfen/als.js */
 ! function() {
 
     // 
