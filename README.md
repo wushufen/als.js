@@ -70,9 +70,9 @@ if ('dev') {
 ### als(handler)
 添加拦截处理器，可以添加多个以处理多种情况
 * handler(type, url, data): 处理函数
-  * type: ajax 请求类型
-  * url
-  * data
+  * type: ajax请求类型
+  * url: 请求url
+  * data: 发送的数据。已解析为js对象
   * return: 返回则作为ajax响应，无return则不拦截该请求
 
 ### als.open()
