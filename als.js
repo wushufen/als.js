@@ -236,6 +236,49 @@
         return data
     }
 
+    // parse data
+    function parseData(params, cb) {
+        // json param
+        var data = {}
+        if (typeof params == 'string') {
+            data = params.match('{') ? JSON.parse(params) : parseParams(params)
+        }
+
+        // formData
+        var fileCount = 0
+        if (params instanceof (window.FormData||function(){})){
+            var keys = params.keys()
+
+            for(var item; item = keys.next(), !item.done;){
+
+                var key = item.value
+                var value = params.get(key)
+                data[key] = value
+
+                if (value instanceof (window.File||function(){})) {
+                    fileCount += 1
+
+                    var reader = new FileReader
+                    reader.onload = function (e) {
+                        fileCount -= 1
+                        data[key] = e.target.result
+
+                        if (!fileCount) {
+                            cb && cb(data)
+                        }
+                    }
+                    reader.readAsDataURL(value)
+                }
+
+            }
+        }
+        if (!fileCount) {
+            cb && cb(data)
+        }
+
+        return data
+    }
+
 
     // 拦截处理器
     var handlers = []
@@ -251,61 +294,58 @@
         PRO.open = function(type, url) {
             PRO_open.apply(this, arguments)
 
-            this.send = function(params) {
+            var xhr = this
+            xhr.send = function(params) {
                 // parse data
-                var data = {}
-                if (typeof params == 'string') {
-                    data = params.match('{') ? JSON.parse(params) : parseParams(params)
-                }
-
-                // 拦截处理
-                var rs
-                try {
-                    for (var i = 0; i < handlers.length; i++) {
-                        var handler = handlers[i]
-                        if (typeof handler == 'function') {
-                            rs = handler(type, url, data) || rs
+                console.time('parse')
+                parseData(params, function(data){
+console.timeEnd('parse')
+                    // 拦截处理
+                    var rs
+                    try {
+                        for (var i = 0; i < handlers.length; i++) {
+                            var handler = handlers[i]
+                            if (typeof handler == 'function') {
+                                rs = handler(type, url, data) || rs
+                            }
                         }
+                    } catch (e) {
+                        console.error(e)
                     }
-                } catch (e) {
-                    console.error(e)
-                }
 
-                // 是否拦截返回
-                if (rs) {
+                    // 是否拦截返回
+                    if (rs) {
 
-                    // 覆盖
-                    PRO_open.apply(this, [type, url + '?__@[als]'])
+                        // 覆盖
+                        // PRO_open.apply(xhr, [type, url + '?__@[als]'])
 
-                    // 取消用户注册的回调
-                    var onload = this.onload
-                    var orc = this.onreadystatechange
-                    this.onload = null
-                    this.onreadystatechange = null
+                        // 取消用户注册的回调
+                        var onload = xhr.onload
+                        var orc = xhr.onreadystatechange
+                        xhr.onload = null
+                        xhr.onreadystatechange = null
 
-                    // 模拟成功
-                    var xhr = this
-                    setTimeout(function() {
-                        var res = JSON.stringify(rs)
-                        xhr.readyState = 4
-                        xhr.status = 200
-                        xhr.response = xhr.responseText = res
+                        // 模拟成功
+                        setTimeout(function() {
+                            var res = JSON.stringify(rs)
+                            xhr.readyState = 4
+                            xhr.status = 200
+                            xhr.response = xhr.responseText = res
 
-                        // 手动触发用户回调
-                        onload && onload.apply(xhr, [{}])
-                        orc && orc.apply(xhr, [{}])
-                    }, 1)
+                            // 手动触发用户回调
+                            onload && onload.apply(xhr, [{}])
+                            orc && orc.apply(xhr, [{}])
+                        }, 1)
 
-                    // log
-                    console.info('\n', '[als]', type, url, '\n', data, '\n', rs, '\n\n')
+                        // log
+                        console.info('\n', '[als]', type, url, '\n', data, '\n', rs, '\n\n')
 
-                } else {
+                    } else {
+                        PRO.send.apply(xhr, [params])
+                    }
 
-                    PRO.send.apply(this, arguments)
-                }
-
+                })
             }
-
         }
 
     }
