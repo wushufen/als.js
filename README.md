@@ -4,7 +4,8 @@
 ajax <=> als <=> localStorage
 ```
 
-* 拦截 ajax 使用 localStorage 作为数据库  
+拦截 ajax 使用 localStorage 作为数据库  
+
 * 你可以不用管后端接口有没有开发完，服务有没有启动  
 * 它就像一个服务器，内置一个本地存储模拟的数据库  
 * 你也不用建表建字段，不存在时，它会给你自动创建
