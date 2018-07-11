@@ -25,6 +25,9 @@
             id = +id + 1
             return this.store['als.id'] = id
         },
+        isAction: function (action) {
+            return ['select','insert','update','save','delete'].indexOf(action) != -1
+        },
         insert: function(data, pk) {
             pk = pk || 'id'
             var list = this.read()
@@ -50,7 +53,7 @@
             if (data[pk]) {
                 this.update(data, pk)
             } else {
-                this.insert(data)
+                this.insert(data, pk)
             }
         },
         delete: function(where) {
@@ -233,23 +236,8 @@
     }
 
 
-    // 拦截规则
-    var rules = []
-
-    function getRule(type, url, data) {
-        for (var i = rules.length - 1; i >= 0; i--) {
-            var rule = rules[i]
-            if (typeof rule == 'object') {
-                if (url.match(rule.url) && (!rule.type || (rule.type && rule.type.toUpperCase() == type.toUpperCase()))) {
-                    return rule
-                }
-            }
-            if (typeof rule == 'function') {
-                return rule(type, url, data)
-            }
-        }
-        return false
-    }
+    // 拦截处理器
+    var handlers = []
 
 
     // 拦截
@@ -263,85 +251,58 @@
             PRO_open.apply(this, arguments)
 
             this.send = function(params) {
+                // parse data
+                var data = {}
+                if (typeof params == 'string') {
+                    data = params.match('{') ? JSON.parse(params) : parseParams(params)
+                }
+
+                // 拦截处理
+                var rs
                 try {
-                    // parse data
-                    var data = {}
-                    if (typeof params == 'string') {
-                        data = params.match('{') ? JSON.parse(params) : parseParams(params)
+                    for (var i = 0; i < handlers.length; i++) {
+                        var handler = handlers[i]
+                        if (typeof handler == 'function') {
+                            rs = handler(type, url, data) || rs
+                        }
                     }
-
-                    // 拦截规则
-                    var rule = getRule(type, url, data)
-                    var table = rule.table
-                    var action = rule.action
-                    var pageNo = rule.pageNo
-                    var pageSize = rule.pageSize
-                    var actions = ['select', 'insert', 'update', 'save', 'delete']
-                    var isAction = actions.indexOf(action) != -1
-
-
-                    // 匹配到拦截规则
-                    if (rule && isAction) {
-
-                        // 覆盖
-                        PRO_open.apply(this, [type, url + '?__@[als]'])
-
-                        // before
-                        var before = rule.before || als.before
-                        if (before) {
-                            data = before && before(data)
-                        }
-
-                        // 模拟数据库
-                        var rs = []
-                        if (isAction) {
-                            rs = db.table(table).page(pageNo, pageSize)[action](data) || []
-                        } else {
-                            console.warn('[als] action must be: ' + actions, '=>', action)
-                        }
-
-                        // after
-                        var after = rule.after || als.after
-                        var res = after ? after(rs) : rs
-
-
-                        // 取消用户注册的回调
-                        var onload = this.onload
-                        var orc = this.onreadystatechange
-                        this.onload = null
-                        this.onreadystatechange = null
-
-                        // 模拟成功
-                        var xhr = this
-                        setTimeout(function() {
-                            res = JSON.stringify(res)
-                            xhr.readyState = 4
-                            xhr.status = 200
-                            xhr.response = xhr.responseText = res
-
-                            // 手动触发用户回调
-                            onload && onload.apply(xhr, [{}])
-                            orc && orc.apply(xhr, [{}])
-                        }, 1)
-
-                        // log
-                        var logInfo = {
-                            table: table,
-                            action: action,
-                            data: data,
-                            rs: rs,
-                            res: res,
-                            pageNo: pageNo,
-                            pageSize: pageSize
-                        }
-                        console.info('[als]', type, url, logInfo)
-
-                    }
-
                 } catch (e) {
                     console.error(e)
                 }
-                PRO.send.apply(this, arguments)
+
+                // 是否拦截返回
+                if (rs) {
+
+                    // 覆盖
+                    PRO_open.apply(this, [type, url + '?__@[als]'])
+
+                    // 取消用户注册的回调
+                    var onload = this.onload
+                    var orc = this.onreadystatechange
+                    this.onload = null
+                    this.onreadystatechange = null
+
+                    // 模拟成功
+                    var xhr = this
+                    setTimeout(function() {
+                        var res = JSON.stringify(rs)
+                        xhr.readyState = 4
+                        xhr.status = 200
+                        xhr.response = xhr.responseText = res
+
+                        // 手动触发用户回调
+                        onload && onload.apply(xhr, [{}])
+                        orc && orc.apply(xhr, [{}])
+                    }, 1)
+
+                    // log
+                    console.info('[als]', type, url, data, rs)
+
+                } else {
+
+                    PRO.send.apply(this, arguments)
+                }
+
             }
 
         }
@@ -356,18 +317,9 @@
 
 
     // api
-    function als(rule) {
-        return als.rule(rule)
-    }
-    als.rule = function(rule) {
-        rules.push(rule)
-        return this
-    }
-    als.before = function(data) {
-        return data
-    }
-    als.after = function(data) {
-        return data
+    function als(handler) {
+        handlers.push(handler)
+        return als
     }
     als.open = function() {
         window.XMLHttpRequest = _XHR
@@ -378,17 +330,18 @@
         return this
     }
 
-
     als.db = db
-    als.rules = rules
-    als.getRule = getRule
+    als.table = function (name) {
+        return db.table(name)
+    }
+    als.isAction = db.isAction
 
 
+    // export
     if (typeof module != 'undefined') {
         module.exports = als
     } else {
         window.als = als
     }
-
 
 }()
