@@ -89,7 +89,7 @@ action 是否为 `'select'`, `'insert'`, `'update'`, `'save'`, `'delete'`
 * name: 表名
 
 ### als.table(name).insert(data, [pk='id'])
-插入一条数据
+插入一条数据，并自动生成一个唯一主键
 * data: 要存储的数据
 * pk: 表的主键，默认为id，自动自增
 
