@@ -106,6 +106,10 @@
                 if (typeof ov == 'object') continue
                 if (typeof wv == 'object') continue
                 if (!(key in obj)) continue
+                if(wv==='' || wv===undefined || wv===null) continue
+
+                // search
+                if (typeof ov == 'string' && ov.match(wv)) continue
 
                 if (ov != wv) {
                     isMatch = false
