@@ -404,7 +404,10 @@
         window.XMLHttpRequest = XHR
         return this
     }
-    als.table = function (name) {
+    als.table = function (name, action, data, pageNo, pageSize, pk) {
+        if (als.isAction(action)) {
+            return db.table(name).page(pageNo,pageSize)[action](data, pk)
+        }
         return db.table(name)
     }
     als.db = db
