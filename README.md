@@ -5,9 +5,9 @@
 ajax <=> als <=> localStorage
 ```
 
-* 无须后端接口即可完成前端业务开发
+* 无须后端服务器即可完成前端业务开发
 * 它是一个模拟服务器及数据库
-* 它能处理所有增删改查的ajax请求，并自动建表
+* 它能处理所有增删改查的ajax请求并自动建表
 * 它也可以处理ajax文件上传
 * 不用Mock无意义的数据及写一堆生成规则
 * 它查询出来的就是你提交的数据
@@ -72,10 +72,10 @@ als('.*/(.*)/(.*)$', function(type, url, data, match) {
         // ...
     }
 
-    // 增删改查分页
+    // 使用模拟数据库 增删改查分页
     var rs = als.table(table, action, data, data.pageNo, data.pageSize)
 
-    // ajax响应
+    // 拦截ajax并模拟服务器响应
     return {
         error: 0,
         msg: 'success',

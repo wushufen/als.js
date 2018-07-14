@@ -53,10 +53,10 @@
             // ...
         }
 
-        // 增删改查分页
+        // 使用模拟数据库 增删改查分页
         var rs = als.table(table, action, data, data.pageNo, data.pageSize)
 
-        // ajax响应
+        // 拦截ajax并模拟服务器响应
         return {
             error: 0,
             msg: 'success',
