@@ -6,10 +6,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <title>example - als.js</title>
 </head>
+
 <body>
-
     <div id="el">
-
         <ul id="list">
             <li>
                 <input v-model="form.name" @keypress.enter="add" placeholder="todo">
@@ -21,102 +20,126 @@
                 {{item.id}}
             </li>
         </ul>
-
     </div>
-
     <script src="https://vuejs.org/js/vue.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="als.js"></script>
     <script>
-        // 添加ajax拦截处理器
-        als(function (type, url, data) {
+    // 注册ajax监听处理器
+    als('/(.*)/(.*)$', function(type, url, data, m) {
 
-            // url匹配
-            var m = url.match('.*/(.*)/(.*)')
-            var table = m[1] // 表名
-            var action = m[2] // 操作
+        var table = m[1] // 表名
+        var action = m[2] // 操作
+        if (action == 'list') action = 'select'
 
-            // 如果action为 insert, update, save, delete, select
-            if (als.isAction(action)) {
+        // 模拟数据库 CRUD
+        var rs = als.table(table)[action](data)
 
-                // 本地数据库 CRUD
-                var rs = als.table(table)[action](data)
-
-                // 返回结果作为ajax响应
-                return {
-                    code: 10000,
-                    msg: 'success',
-                    data: rs
-                }
-            }
-
-        })
-
-        // 开启ajax拦截
-        if ('dev') {
-            als.open()
+        // 模拟服务器返回
+        return {
+            code: 10000,
+            msg: 'success',
+            data: rs
         }
+    })
 
+    als('user/add', function(type, url, data) {
+
+        als.table('user').insert(data)
+
+        return {
+            code: 10000,
+            msg: 'success'
+        }
+    })
+
+    als('user/list', function(type, url, data) {
+
+        var rs = als.table('user').select()
+
+        return {
+            code: 10000,
+            msg: 'success',
+            data: rs
+        }
+    })
+
+    als('upload', function(type, url, data) {
+        return {
+            code: 10000,
+            msg: 'upload success',
+            data: {
+                url: data.file
+            }
+        }
+    }, 2000)
+
+    // 开启ajax监听
+    als.open()
+
+
+    // ajax监听与拦截 & 数据库与服务器模拟
     </script>
     <script>
-        var vue = new Vue({
-            el: '#el',
-            data: {
-                form: {
-                    name: ''
-                },
-                list: []
+    var vue = new Vue({
+        el: '#el',
+        data: {
+            form: {
+                name: ''
             },
-            methods: {
-                add: function () {
-                    $.ajax({
-                        type: 'post',
-                        url: 'api/todo/insert',
-                        data: this.form,
-                        success: function (res) {
-                            vue.load()
-                        }
-                    })
-                    this.form.name=''
-                },
-                edit: function (item) {
-                    $.ajax({
-                        type: 'post',
-                        url: 'api/todo/update',
-                        data: item,
-                        success: function (res) {
-                            vue.load()
-                        }
-                    })
-                },
-                load: function () {
-                    $.ajax({
-                        type: 'get',
-                        url: 'api/todo/select',
-                        dataType: 'json',
-                        success: function(res){
-                            if(res && res.code == 10000){
-                                vue.list = res.data
-                            }
-                        }
-                    })
-                },
-                del: function (item) {
-                    $.ajax({
-                        type: 'post',
-                        url: 'api/todo/delete',
-                        data: item,
-                        success: function (res) {
-                            console.log(res)
-                            vue.load()
-                        }
-                    })
-                }
+            list: []
+        },
+        methods: {
+            add: function() {
+                $.ajax({
+                    type: 'post',
+                    url: 'api/todo/insert',
+                    data: this.form,
+                    success: function(res) {
+                        vue.load()
+                    }
+                })
+                this.form.name = ''
             },
-            mounted: function () {
-                this.load()
+            edit: function(item) {
+                $.ajax({
+                    type: 'post',
+                    url: 'api/todo/update',
+                    data: item,
+                    success: function(res) {
+                        vue.load()
+                    }
+                })
+            },
+            load: function() {
+                $.ajax({
+                    type: 'get',
+                    url: 'api/todo/select',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res && res.code == 10000) {
+                            vue.list = res.data
+                        }
+                    }
+                })
+            },
+            del: function(item) {
+                $.ajax({
+                    type: 'post',
+                    url: 'api/todo/delete',
+                    data: item,
+                    success: function(res) {
+                        console.log(res)
+                        vue.load()
+                    }
+                })
             }
-        })
+        },
+        mounted: function() {
+            this.load()
+        }
+    })
     </script>
 </body>
+
 </html>

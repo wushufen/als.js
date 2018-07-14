@@ -14,3 +14,7 @@ als('(.*)/(.*)$', function(type, url, data, match){
 		data: rs
 	}
 })
+
+als(function(type, url, data){
+	
+})

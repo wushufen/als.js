@@ -2,7 +2,7 @@
 ! function() {
 
     // 
-    // 本地存储 模拟 数据库
+    // 模拟数据库
     // 
     var db = {
         store: window.localStorage || {},
@@ -19,15 +19,16 @@
             }
         },
         write: function(data) {
-            this.store[this.name] = JSON.stringify(data, null, ' ')
+            try {
+                this.store[this.name] = JSON.stringify(data, null, ' ')
+            } catch (e) {
+                console.error('[als]', e)
+            }
         },
         cid: function() {
             var id = this.store['als.id'] || '0'
             id = +id + 1
             return this.store['als.id'] = id
-        },
-        isAction: function (action) {
-            return ['select','insert','update','save','delete'].indexOf(action) != -1
         },
         insert: function(data, pk) {
             pk = pk || 'id'
@@ -117,6 +118,9 @@
                 }
             }
             return isMatch
+        },
+        isAction: function (action) {
+            return ['select','insert','update','save','delete'].indexOf(action) != -1
         }
     }
 
@@ -184,8 +188,9 @@
     }
 
 
-    // k=v&a=b  //=> {}
-    function parseParams(params) {
+    // application/x-www-form-urlencoded => {}
+    // k=v&obj[arr][0][]
+    function parseXWWWFormUrlencoded(params) {
         if (!params) { return {} }
 
         var data = {}
@@ -240,15 +245,16 @@
         return data
     }
 
+
     // parse data
     function parseData(params, cb) {
-        // json param
+        // json & application/x-www-form-urlencoded
         var data = {}
         if (typeof params == 'string') {
-            data = params.match('{') ? JSON.parse(params) : parseParams(params)
+            data = params.match('{') ? JSON.parse(params) : parseXWWWFormUrlencoded(params)
         }
 
-        // formData
+        // FormData
         var fileCount = 0
         if (params instanceof (window.FormData||function(){})){
             var keys = params.keys()
@@ -284,11 +290,12 @@
     }
 
 
-    // 拦截处理器
-    var handlers = []
+    // ajax监听处理器
+    // {url:'',handler:fn, delay:1}
+    var rules = []
 
 
-    // 拦截
+    // 注入监听
     function inject(_XHR) {
 
         var XHR = _XHR
@@ -302,20 +309,35 @@
             xhr.send = function(params) {
                 // parse data
                 parseData(params, function(data){
-                    // 拦截处理
+                    // 监听处理
                     var rs
+                    var delay = 1
+                    var _delay
                     try {
-                        for (var i = 0; i < handlers.length; i++) {
-                            var handler = handlers[i]
-                            if (typeof handler == 'function') {
-                                rs = handler(type, url, data) || rs
+                        for (var i = 0; i < rules.length; i++) {
+                            var rule = rules[i]
+                            var match = url.match(rule.url)
+                            if (match) {
+
+                                var handler = rule.handler
+                                if (typeof handler == 'function') {
+                                    var _rs = handler(type, url, data, match)
+                                    if (_rs) {
+                                        rs = _rs
+                                        _delay = rule.delay || delay
+                                    }
+                                } else {
+                                    rs = handler
+                                    _delay = rule.delay || delay
+                                }
                             }
                         }
+                        delay = _delay
                     } catch (e) {
                         console.error(e)
                     }
 
-                    // 是否拦截返回
+                    // 拦截
                     if (rs) {
 
                         // 覆盖
@@ -337,7 +359,7 @@
                             // 手动触发用户回调
                             onload && onload.apply(xhr, [{}])
                             orc && orc.apply(xhr, [{}])
-                        }, 1)
+                        }, delay)
 
                         // log
                         console.info('\n', '[als]', type, url, '\n', data, '\n', rs, '\n\n')
@@ -353,15 +375,25 @@
     }
 
 
-    // 
+    // 真假切换
     var XHR = window.XMLHttpRequest
     var _XHR = fakeXHR(XHR)
     inject(_XHR)
 
 
     // api
-    function als(handler) {
-        handlers.push(handler)
+    function als(url, handler, delay) {
+        if (typeof url == 'function') {
+            delay = handler
+            handler = url
+            url = ''
+        }
+
+        rules.push({
+            url: url,
+            handler: handler,
+            delay: delay
+        })
         return als
     }
     als.open = function() {
@@ -372,11 +404,10 @@
         window.XMLHttpRequest = XHR
         return this
     }
-
-    als.db = db
     als.table = function (name) {
         return db.table(name)
     }
+    als.db = db
     als.isAction = db.isAction
 
 
