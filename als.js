@@ -1,5 +1,6 @@
 /*! @preserve https://github.com/wusfen/als.js */
-! function() {
+
+! function(window) {
 
     // 
     // 模拟数据库
@@ -107,7 +108,7 @@
                 if (typeof ov == 'object') continue
                 if (typeof wv == 'object') continue
                 if (!(key in obj)) continue
-                if(wv==='' || wv===undefined || wv===null) continue
+                if (wv === '' || wv === undefined || wv === null) continue
 
                 // search
                 if (typeof ov == 'string' && ov.match(wv)) continue
@@ -119,8 +120,8 @@
             }
             return isMatch
         },
-        isAction: function (action) {
-            return ['select','insert','update','save','delete'].indexOf(action) != -1
+        isAction: function(action) {
+            return ['select', 'insert', 'update', 'save', 'delete'].indexOf(action) != -1
         }
     }
 
@@ -256,20 +257,20 @@
 
         // FormData
         var fileCount = 0
-        if (params instanceof (window.FormData||function(){})){
+        if (window.FormData && params instanceof FormData) {
             var keys = params.keys()
 
-            for(var item; item = keys.next(), !item.done;){
+            for (var item; item = keys.next(), !item.done;) {
 
                 var key = item.value
                 var value = params.get(key)
                 data[key] = value
 
-                if (value instanceof (window.File||function(){})) {
+                if (window.File && value instanceof File) {
                     fileCount += 1
 
                     var reader = new FileReader
-                    reader.onload = function (e) {
+                    reader.onload = function(e) {
                         fileCount -= 1
                         data[key] = e.target.result
 
@@ -308,7 +309,7 @@
             var xhr = this
             xhr.send = function(params) {
                 // parse data
-                parseData(params, function(data){
+                parseData(params, function(data) {
                     // 监听处理
                     var rs
                     var delay = 1
@@ -320,14 +321,9 @@
                             if (match) {
 
                                 var handler = rule.handler
-                                if (typeof handler == 'function') {
-                                    var _rs = handler(type, url, data, match)
-                                    if (_rs) {
-                                        rs = _rs
-                                        _delay = rule.delay || delay
-                                    }
-                                } else {
-                                    rs = handler
+                                var _rs = handler(type, url, data, match)
+                                if (_rs) {
+                                    rs = _rs
                                     _delay = rule.delay || delay
                                 }
                             }
@@ -388,6 +384,12 @@
             handler = url
             url = ''
         }
+        if (typeof handler == 'object') {
+            var response = handler
+            handler = function() {
+                return response
+            }
+        }
 
         rules.push({
             url: url,
@@ -404,9 +406,9 @@
         window.XMLHttpRequest = XHR
         return this
     }
-    als.table = function (name, action, data, pageNo, pageSize, pk) {
+    als.table = function(name, action, data, pageNo, pageSize, pk) {
         if (als.isAction(action)) {
-            return db.table(name).page(pageNo,pageSize)[action](data, pk)
+            return db.table(name).page(pageNo, pageSize)[action](data, pk)
         }
         return db.table(name)
     }
@@ -421,4 +423,4 @@
         window.als = als
     }
 
-}()
+}(window)
