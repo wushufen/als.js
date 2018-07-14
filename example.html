@@ -11,7 +11,7 @@
     <div id="el">
         <ul id="list">
             <li>
-                <input v-model="form.name" @keypress.enter="add" placeholder="todo">
+                <input v-model="form.name" @keypress.enter="add" placeholder="todo: 添加后刷新看看">
                 <button @click="add">+</button>
             </li>
             <li v-for="item in list">
@@ -25,60 +25,45 @@
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="als.js"></script>
     <script>
-    // 注册ajax监听处理器
-    als('/(.*)/(.*)$', function(type, url, data, m) {
+    // 开发环境开启ajax监听
+    if ('dev') {
+        als.open()
+    }
 
-        var table = m[1] // 表名
-        var action = m[2] // 操作
-        if (action == 'list') action = 'select'
+    // 添加监听处理器
+    als('.*/(.*)/(.*)$', function(type, url, data, match) {
 
-        // 模拟数据库 CRUD
-        var rs = als.table(table)[action](data)
+        // url匹配
+        var table = match[1] // 表名
+        var action = match[2] // 操作
 
-        // 模拟服务器返回
+        // action映射
+        action = {
+            'add': 'insert',
+            'list': 'select'
+            // ...
+        }[action] || action
+
+        // 是否 insert, update, save, delete, select
+        if (!als.isAction(action)) return // 否则不拦截
+
+        // 添加一些字段
+        if (action == 'insert' || action == 'save') {
+            data.createTime = new Date().getTime()
+            // ...
+        }
+
+        // 使用模拟数据库 增删改查分页
+        var rs = als.table(table, action, data, data.pageNo, data.pageSize)
+
+        // 拦截ajax并模拟服务器响应
         return {
-            code: 10000,
+            error: 0,
             msg: 'success',
-            data: rs
+            data: rs,
+            total: als.table(table).select().length
         }
     })
-
-    als('user/add', function(type, url, data) {
-
-        als.table('user').insert(data)
-
-        return {
-            code: 10000,
-            msg: 'success'
-        }
-    })
-
-    als('user/list', function(type, url, data) {
-
-        var rs = als.table('user').select()
-
-        return {
-            code: 10000,
-            msg: 'success',
-            data: rs
-        }
-    })
-
-    als('upload', function(type, url, data) {
-        return {
-            code: 10000,
-            msg: 'upload success',
-            data: {
-                url: data.file
-            }
-        }
-    }, 2000)
-
-    // 开启ajax监听
-    als.open()
-
-
-    // ajax监听与拦截 & 数据库与服务器模拟
     </script>
     <script>
     var vue = new Vue({
@@ -93,7 +78,7 @@
             add: function() {
                 $.ajax({
                     type: 'post',
-                    url: 'api/todo/insert',
+                    url: 'server/todo/insert',
                     data: this.form,
                     success: function(res) {
                         vue.load()
@@ -104,7 +89,7 @@
             edit: function(item) {
                 $.ajax({
                     type: 'post',
-                    url: 'api/todo/update',
+                    url: 'server/todo/update',
                     data: item,
                     success: function(res) {
                         vue.load()
@@ -114,10 +99,10 @@
             load: function() {
                 $.ajax({
                     type: 'get',
-                    url: 'api/todo/select',
+                    url: 'server/todo/select',
                     dataType: 'json',
                     success: function(res) {
-                        if (res && res.code == 10000) {
+                        if (!res.error) {
                             vue.list = res.data
                         }
                     }
@@ -126,10 +111,9 @@
             del: function(item) {
                 $.ajax({
                     type: 'post',
-                    url: 'api/todo/delete',
+                    url: 'server/todo/delete',
                     data: item,
                     success: function(res) {
-                        console.log(res)
                         vue.load()
                     }
                 })

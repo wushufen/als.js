@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>upload.example - als.js</title>
+</head>
+
+<body>
+    <div>
+        <input id="file" type="file" name="file" onchange="upload(this)">
+        <div id="msg">请选择要上传的图片</div>
+        <img id="img" style="max-width:100%">
+    </div>
+    <script>
+        function upload(input) {
+            msg.innerHTML = '...'
+
+            var formData = new FormData
+            formData.append('file', input.files[0])
+
+            var xhr = new XMLHttpRequest
+            xhr.open('POST', 'url/upload', true)
+            xhr.onload = function () {
+
+                var res = JSON.parse(xhr.responseText)
+                img.src = res.data.url
+
+                msg.innerHTML = res.msg
+            }
+            xhr.send(formData)
+        }
+    </script>
+    <script src="als.js"></script>
+    <script>
+    // 开发环境开启ajax监听
+    if ('dev') {
+        als.open()
+    }
+
+    als('.*/upload', function(type, url, data) {
+
+        return {
+            error: 0,
+            msg: 'upload success',
+            data: {
+                url: data.file // base64
+                // url: '或者使用网络图片代替'
+            }
+        }
+
+    }, 1000); // 假装上传延时
+    </script>
+</body>
+
+</html>
