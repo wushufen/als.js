@@ -248,9 +248,11 @@
 
 
     // parse data
+    // json, application/x-www-form-urlencoded, FormData
     function parseData(params, cb) {
-        // json & application/x-www-form-urlencoded
         var data = {}
+
+        // json, application/x-www-form-urlencoded
         if (typeof params == 'string') {
             data = params.match('{') ? JSON.parse(params) : parseXWWWFormUrlencoded(params)
         }
@@ -291,6 +293,18 @@
     }
 
 
+    function extend() {
+        var obj = arguments[0]
+        for (var i = 1; i < arguments.length; i++) {
+            var _obj = arguments[i]
+            for(var k in _obj){
+                obj[k] = _obj[k]
+            }
+        }
+        return arguments[0]
+    }
+
+
     // ajax监听处理器
     // {url:'',handler:fn, delay:1}
     var rules = []
@@ -308,8 +322,14 @@
 
             var xhr = this
             xhr.send = function(params) {
+
+                // ?search
+                var search = parseData((url.match(/\?(.*)/)||[])[1]) || {}
+
                 // parse data
                 parseData(params, function(data) {
+                    data = extend({}, search, data)
+
                     // 监听处理
                     var rs
                     var delay = 1

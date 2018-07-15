@@ -31,7 +31,7 @@
     }
 
     // 添加监听处理器
-    als('.*/(.*)/(.*)$', function(type, url, data, match) {
+    als('.*/(\\w+)/(\\w+)', function(type, url, data, match) {
 
         // url匹配
         var table = match[1] // 表名
@@ -75,6 +75,22 @@
             list: []
         },
         methods: {
+            load: function() {
+                $.ajax({
+                    type: 'get',
+                    url: 'server/todo/select',
+                    data: {
+                        pageNo: 1,
+                        pageSize: 100
+                    },
+                    dataType: 'json',
+                    success: function(res) {
+                        if (!res.error) {
+                            vue.list = res.data
+                        }
+                    }
+                })
+            },
             add: function() {
                 $.ajax({
                     type: 'post',
@@ -93,18 +109,6 @@
                     data: item,
                     success: function(res) {
                         vue.load()
-                    }
-                })
-            },
-            load: function() {
-                $.ajax({
-                    type: 'get',
-                    url: 'server/todo/select',
-                    dataType: 'json',
-                    success: function(res) {
-                        if (!res.error) {
-                            vue.list = res.data
-                        }
                     }
                 })
             },
